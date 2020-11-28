@@ -4,13 +4,13 @@ from datetime import datetime, timedelta
 class Event:
 
     def __init__(self,
-                 user_id,
+                 user,
                  time_start: datetime,
                  time_end: datetime,
                  name='', description='',
                  event_group_id=None,
                  done=False):
-        self.user_id = user_id
+        self.user = user
         self.name = name
         self.time_start = time_start
         self.time_end = time_end

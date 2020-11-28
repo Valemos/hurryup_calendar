@@ -5,7 +5,6 @@ class EventGroup:
             events = []
 
         self.user = user
-        self.user_id = user.id
         self.name = name
         self.description = description
         self.done = False
