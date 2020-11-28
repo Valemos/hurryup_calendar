@@ -1,8 +1,17 @@
-from application.user import DatabaseSavable
+from application.user import User, DatabaseSavable
 
-class EventPattern:
+class EventPattern(DatabaseSavable):
+
+    table_name = "\"EventPattern\""
+    table_columns = {
+        'id':           "SERIAL PRIMARY KEY",
+        'user_id':      f"INTEGER REFERENCES {User.table_name}(id)",
+        'name':         "VARCHAR(64) NOT NULL",
+        'description':  "TEXT"
+    }
 
     def __init__(self, user, name, description='', events=None):
+        super().__init__()
 
         if events is None:
             self.events = []
@@ -10,6 +19,7 @@ class EventPattern:
             self.events = events
 
         self.user = user
+        self.user_id = user.id
         self.name = name
         self.description = description
 

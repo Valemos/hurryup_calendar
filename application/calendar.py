@@ -13,6 +13,7 @@ class Calendar:
 
     def __init__(self):
         self.database_handler = DatabaseHandler()
+        # check connection to database here
 
     def get_events_today(self, user: User, request_date: date):
         """
