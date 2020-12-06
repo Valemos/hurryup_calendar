@@ -1,4 +1,5 @@
 from datetime import date, time, datetime, timedelta
+from dateutil.relativedelta import relativedelta
 
 from database.database_handler import DatabaseHandler
 
@@ -14,19 +15,20 @@ class Calendar:
     def __init__(self):
         self.database_handler = DatabaseHandler()
         # check connection to database here
+        if not self.database_handler.check_connected():
+            print("Application not connected to database")
 
     def get_events_today(self, user: User, request_date: date):
         """
-        Using request_date to get events starting from Monday to Sunday of this week
+        Using request_date to get events starting from 0:00 AM today to 00:00 AM tomorrow
 
-        :param user:
-        :param request_date:
-        :return:
+        :param user: user object
+        :param request_date: date to get events
+        :return: events list
         """
 
-        # get first day of current week
-        first_day = request_date - timedelta(days=request_date.weekday())
-        return self.database_handler.get_events_for_period(user, first_day, first_day + timedelta(days=7))
+        today = datetime.combine(request_date, time(0, 0, 0))
+        return self.database_handler.get_events_for_period(user, today, today + timedelta(days=1))
 
     def get_events_week(self, user: User, request_date: date):
         """
@@ -49,7 +51,9 @@ class Calendar:
         :param request_date: date corresponds to some month
         :return:
         """
-        pass
+        first_day = request_date - timedelta(days=request_date.day + 1)
+        last_day = first_day + relativedelta(months=1)
+        return self.database_handler.get_events_for_period(user, first_day, last_day - timedelta(days=1))
 
     def update_user(self, user: User):
         """
@@ -73,7 +77,7 @@ class Calendar:
 
         :param group: EventGroup object
         """
-        pass
+        self.database_handler.update(group.user, group)
 
     def get_event_groups(self, user: User):
         """
@@ -89,13 +93,11 @@ class Calendar:
         :param user: user object, requested event patterns
         :return: list of event patterns
         """
-        pass
-    # event patterns
+        return self.database_handler.get_all_event_patterns(user)
 
-    def add_parametric_event(self, event_pattern: EventPattern, event: EventParametric):
+    def add_parametric_event(self, event: EventParametric):
         """
-        Appends event to event_pattern in database
-        :param event_pattern:
-        :param event: EventParametric object to add to EventPattern
+        Inserts EventParametric to be associated with EventPattern inside event in database
+        :param event: EventParametric object to add to EventPattern in database
         """
-        pass
+        self.database_handler.update(event)

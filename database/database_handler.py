@@ -62,7 +62,7 @@ class DatabaseHandler:
             print(f"connection to database failed {exc}")
             return False
 
-    def check_connection(self):
+    def check_connected(self):
         """Returns True if connection established, else returns False."""
         return self._connected_db
 
@@ -88,10 +88,15 @@ class DatabaseHandler:
         # add columns to tables
         for table in self._tables_list:
             try:
+                query = ""
                 for col_name, col_def in table.table_columns.items():
-                    self._main_cursor.execute(
-                        f"ALTER TABLE {table.table_name} ADD COLUMN IF NOT EXISTS {col_name} {col_def};"
-                    )
+                    query += f"ALTER TABLE {table.table_name} ADD COLUMN IF NOT EXISTS {col_name} {col_def};\n"
+
+                if table.table_composite_primary_key is not None:
+                    key_values = sql.SQL(",").join(sql.Identifier(i) for i in table.table_composite_primary_key)
+                    query += f"ALTER TABLE {table.table_name} DROP PRIMARY KEY, ADD PRIMARY KEY({key_values});"
+
+                self._main_cursor.execute(query)
             except Exception as e:
                 print(e)
 
@@ -108,7 +113,7 @@ class DatabaseHandler:
         self._main_connection.commit()  # push changes to DB
 
     # database request functions
-    def update(self, user, object_=None):
+    def update(self, obj):
         """
         Updates entity for parent_object if it was already created
         Inserts entity for parent_object if it is new in table (if id was not assigned to it at creation point)
@@ -116,24 +121,27 @@ class DatabaseHandler:
         if entity is None, than parent_object is the entity to update or insert
 
         :param user: parent_object, who requests update
-        :param object_: object to update in database
+        :param obj: object to update in database
         :return: True if update successful False otherwise
         """
-        if object_ is None:
-            return self.update_user(user)
-        else:
-            return self.update_user_object(object_)
+        if self._connected_db:
+            if obj.id != -1:
+                # obj.id remains the same
+                self._query_update_one(obj, {"user_id": obj.user_id})
+            else:
+                # execute insert query and update object id
+                obj.id = self._query_insert_one(obj)
 
-    def delete(self, user, object_=None):
+            self._main_connection.commit()
+            return obj
+        return None
+
+    def delete(self, obj=None):
         """
         Deletes object from database
-        Must also implement deleting child objects using DELETE CASCADE for PostgreSQL
-        :param user:
-        :param object_:
-        :return:
+        :param obj:
         """
-        # todo: write universal delete method
-        pass
+
 
     def get_events_for_period(self, user, start: datetime, end: datetime):
         """get all events in given date range as list"""
@@ -160,10 +168,6 @@ class DatabaseHandler:
         """
         pass
 
-    def get_events_for_group(self, user, group):
-        """return all events by event group"""
-        pass
-
     def update_user(self, user: User):
         """
         Updates user if it was already created
@@ -177,7 +181,7 @@ class DatabaseHandler:
         if self._connected_db:
             if user.id != -1:
                 # object id remains the same
-                self._query_update_one(user, "id", user.id)
+                self._query_update_one(user, {"id": user.id})
             else:
                 # execute insert query and update user id
                 user.id = self._query_insert_one(user)
@@ -186,36 +190,21 @@ class DatabaseHandler:
             return user
         return None
 
-    def update_user_object(self, object_):
+    def delete_user(self, user: User):
         """
-        object_ must contain user_id field to identify it among all users
-        Updates entity if it was already created
-        Inserts entity if it is new in table (if id was not assigned to it at creation point)
-
-        :param object_: object, which belongs to user
-        :return: reference to the 'object_' with updated id
-                or None, if connection with database was not established yet
+        Deletes entry from User table and cascade delete all connected entries
+        :param user: User object to delete
         """
-        if self._connected_db:
-            if object_.id != -1:
-                # object_.id remains the same
-                self._query_update_one(object_, "user_id", object_.user_id)
-            else:
-                # execute insert query and update object_id
-                object_.id = self._query_insert_one(object_)
+        self._query_delete_one(user, {"id": user.id})
 
-            self._main_connection.commit()
-            return object_
-        return None
-
-    def _query_insert_one(self, object_):
+    def _query_insert_one(self, obj):
         """
         Executes INSERT query with object fields and values
 
-        :param object_: object to insert
+        :param obj: object to insert
         :return: id of newly created object
         """
-        values = object_.get_values()  # debug
+        values = obj.get_values()
 
         keys_str = sql.SQL(', ').join(
             map(sql.Identifier,
@@ -224,24 +213,27 @@ class DatabaseHandler:
 
         values_str = sql.SQL(', ').join(
             map(sql.Literal,
-                (value for key, value in values if key != "id"))
+                (val for key, val in values if key != "id"))
         ).as_string(self._main_cursor)
 
         self._main_cursor.execute(
-            f"INSERT INTO {object_.table_name}({keys_str})\n"
+            f"INSERT INTO {obj.table_name}({keys_str})\n"
             f"VALUES ({values_str}) "
             "RETURNING id;"
         )
         return self._main_cursor.fetchone()[0]
 
-    def _query_update_one(self, object_, field_name: str, field_value):
+    @staticmethod
+    def _and_clause_from_dict(field_dict: dict):
+        return sql.SQL(" AND ").join(f"{sql.Identifier(name)} = {sql.Literal(value)}" for name, value in field_dict.items())
+
+    def _query_update_one(self, obj, field_dict: dict):
         """
         This function contains UPDATE query which searches for specific value of a field
         and updates contents of matching object using _main_cursor
 
-        :param object_: object which will be updated
-        :param field_name: string name of field to search
-        :param field_value: value of a field to search
+        :param obj: object which will be updated
+        :param field_dict: dictionary of field:value pairs to search for query
         """
         set_fields_string = sql.SQL(', ').join(
             map(lambda id_, value: (
@@ -249,9 +241,18 @@ class DatabaseHandler:
                     sql.Identifier(id_),
                     sql.Literal(value))
             ),
-                (elem for elem in object_.get_values() if elem[0] != "id" and elem[0] != field_name))
+                (elem for elem in obj.get_values() if elem[0] != "id" and elem[0] not in field_dict))
         )
+        query = f"UPDATE {obj.table_name}\nSET {set_fields_string}\nWHERE {self._and_clause_from_dict(field_dict)};"
 
-        query = f"UPDATE {object_.table_name}\nSET {set_fields_string}\nWHERE {field_name} = {field_value};"
+        self._main_cursor.execute(query)
 
+    def _query_delete_one(self, obj, field_dict: dict):
+        """
+
+        :param obj: object to delete
+        :param field_dict: dictionary of field:value pairs to search for query
+        """
+
+        query = f"DELETE FROM {obj.table_name} WHERE {self._and_clause_from_dict(field_dict)};"
         self._main_cursor.execute(query)

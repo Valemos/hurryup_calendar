@@ -7,7 +7,7 @@ class EventGroup(DatabaseSavable):
 
     table_columns = {
         "id":           "SERIAL PRIMARY KEY",
-        "user_id":      f"INTEGER REFERENCES {User.table_name}(id)",
+        "user_id":      f"INTEGER REFERENCES {User.table_name}(id) ON DELETE CASCADE",
         "name":         "VARCHAR(64) NOT NULL",
         "description":  "TEXT",
         "done":         "BOOLEAN"

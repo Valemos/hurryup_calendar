@@ -20,6 +20,15 @@ class DatabaseSavable:
     """
     table_columns = {}
 
+    """
+    If an object has any composite key, it can be defined using this variable
+    
+    It must specify list of column names to be included to primary key
+    
+    If table_composite_primary_key is None, primary key must be defined as modifier to existing column 
+    """
+    table_composite_primary_key: list = None
+
     def __init__(self):
         # id is created by default for each object
         self.id = -1

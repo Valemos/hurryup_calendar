@@ -10,7 +10,7 @@ class Event(DatabaseSavable):
     table_name = "\"Event\""
     table_columns = {
         'id':               "SERIAL PRIMARY KEY",
-        'user_id':          f"INTEGER REFERENCES {User.table_name}",
+        'user_id':          f"INTEGER REFERENCES {User.table_name} ON DELETE CASCADE",
         'time_start':       "TIMESTAMP NOT NULL",
         'time_end':         "TIMESTAMP NOT NULL",
         'name':             "VARCHAR(64) NOT NULL",
@@ -44,6 +44,8 @@ class EventParticipants(DatabaseSavable, ABC):
 
     table_name = "\"EventParticipants\""
     table_columns = {
-        'event_id': f"INTEGER REFERENCES {Event.table_name}(id)",
-        'user_id':  f"INTEGER REFERENCES {User.table_name}(id)"
+        'event_id': f"INTEGER REFERENCES {Event.table_name}(id) ON DELETE CASCADE",
+        'user_id':  f"INTEGER REFERENCES {User.table_name}(id) ON DELETE CASCADE"
     }
+
+    table_composite_primary_key = ["event_id", "user_id"]

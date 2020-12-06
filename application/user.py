@@ -28,3 +28,11 @@ class User(DatabaseSavable):
         self.password_hash = password_hash
         self.account_type = account_type.value
         self.image_url = image_url
+
+    def update_db(self, database):
+        database.update_user(self)
+
+    def delete_db(self, database):
+        database.delete_user(self)
+
+
