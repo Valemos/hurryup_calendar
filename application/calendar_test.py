@@ -1,24 +1,19 @@
+import pytest
+
 from datetime import datetime, date
 from hashlib import md5
-from pathlib import Path
-
-import pytest
-from pytest_postgresql import factories
 
 from database.database_handler import DatabaseHandler
 from application.calendar import Calendar, User, Event
 
-
-postgresql_proc2 = factories.postgresql_proc(executable=r'"C:/Program Files/PostgreSQL/12/bin/pg_ctl.exe"', port=9876)
-postgresql_test = factories.postgresql('postgresql_proc2')
-
-
-def test_get_for_week(postgresql_test):
-
-    calendar = Calendar()
-    calendar.database_handler._main_connection = postgresql_test
-    calendar.database_handler._main_cursor = postgresql_test.cursor()
+@pytest.fixture()
+def calendar():
+    calendar = Calendar(DatabaseHandler(new_name="testcalendar"))
     calendar.database_handler._recreate_all_tables()
+    return calendar
+
+
+def test_get_for_week(calendar):
 
     test_user = User("Test", "test", "a@gmail.com", md5(b"1234567890").digest().hex())
     calendar.update_user(test_user)
