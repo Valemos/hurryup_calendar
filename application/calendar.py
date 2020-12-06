@@ -12,8 +12,9 @@ from application.event_parametric import EventParametric
 
 class Calendar:
 
-    def __init__(self):
-        self.database_handler = DatabaseHandler()
+    def __init__(self, database_handler=None):
+        self.database_handler = database_handler if database_handler is not None else DatabaseHandler()
+
         # check connection to database here
         if not self.database_handler.check_connected():
             print("Application not connected to database")
