@@ -94,7 +94,7 @@ class DatabaseHandler:
 
                 if table.table_composite_primary_key is not None:
                     key_values = sql.SQL(",").join(sql.Identifier(i) for i in table.table_composite_primary_key)
-                    query += f"ALTER TABLE {table.table_name} DROP PRIMARY KEY, ADD PRIMARY KEY({key_values});"
+                    query += f"ALTER TABLE {table.table_name} ADD PRIMARY KEY({key_values.as_string(self._main_cursor)});"
 
                 self._main_cursor.execute(query)
             except Exception as e:
@@ -227,23 +227,29 @@ class DatabaseHandler:
     def _and_clause_from_dict(field_dict: dict):
         return sql.SQL(" AND ").join(f"{sql.Identifier(name)} = {sql.Literal(value)}" for name, value in field_dict.items())
 
-    def _query_update_one(self, obj, field_dict: dict):
+    def _query_update_one(self, obj, search_dict: dict, values_dict: dict = None):
         """
         This function contains UPDATE query which searches for specific value of a field
         and updates contents of matching object using _main_cursor
 
         :param obj: object which will be updated
-        :param field_dict: dictionary of field:value pairs to search for query
+        :param search_dict: dictionary of field:value pairs to search inside query
+        :param values_dict: values to update inside current object,
+                if values is None, all columns for current object will be updated
         """
+
+        if values_dict is None:
+            values_dict = obj.get_values()
+
         set_fields_string = sql.SQL(', ').join(
             map(lambda id_, value: (
                 sql.SQL("{0}={1}").format(
                     sql.Identifier(id_),
                     sql.Literal(value))
             ),
-                (elem for elem in obj.get_values() if elem[0] != "id" and elem[0] not in field_dict))
+                (elem for elem in values_dict if elem[0] != "id" and elem[0] not in search_dict))
         )
-        query = f"UPDATE {obj.table_name}\nSET {set_fields_string}\nWHERE {self._and_clause_from_dict(field_dict)};"
+        query = f"UPDATE {obj.table_name}\nSET {set_fields_string}\nWHERE {self._and_clause_from_dict(search_dict)};"
 
         self._main_cursor.execute(query)
 
@@ -256,3 +262,19 @@ class DatabaseHandler:
 
         query = f"DELETE FROM {obj.table_name} WHERE {self._and_clause_from_dict(field_dict)};"
         self._main_cursor.execute(query)
+
+    def update_fields(self, obj, fields: list):
+        """
+        Updates only specifyed fields for given object
+        :param obj: object to update
+        :param fields: list of strings with field names
+        """
+        values = {}
+        for field in fields:
+            if field not in obj.__dict__:
+                raise ValueError(f"Wrong attribute name specifyed {field}")
+
+            values[field] = getattr(obj, field)
+
+        if len(values) > 0:
+            self._query_update_one(obj, {"id": obj.id}, values)

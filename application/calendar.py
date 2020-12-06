@@ -69,7 +69,7 @@ class Calendar:
         :param event: Event object
         :return:
         """
-        self.database_handler.update_user_object(event)
+        self.database_handler.update(event)
 
     def update_event_group(self, group: EventGroup):
         """
@@ -77,7 +77,7 @@ class Calendar:
 
         :param group: EventGroup object
         """
-        self.database_handler.update(group.user, group)
+        self.database_handler.update(group)
 
     def get_event_groups(self, user: User):
         """
@@ -86,6 +86,17 @@ class Calendar:
         :return: list of EventGroup objects
         """
         return self.database_handler.get_all_event_groups(user)
+
+    def add_event_to_group(self, user: User, group: EventGroup, event: Event):
+        """
+        Updates group id inside event and updates database entry
+
+        :param user: user object requested update
+        :param group: target event group
+        :param event: event object of current user to add to group
+        """
+        event.event_group_id = group.id
+        self.database_handler.update_fields(event, ["event_group_id"])
 
     def get_event_patterns(self, user: User):
         """
