@@ -15,7 +15,7 @@ class Event(DatabaseSavable):
         'time_end':         "TIMESTAMP NOT NULL",
         'name':             "VARCHAR(64) NOT NULL",
         'description':      "TEXT",
-        'event_group_id':   f"INTEGER REFERENCES {EventGroup.table_name}(id)",
+        'group_id':   f"INTEGER REFERENCES {EventGroup.table_name}(id)",
         'done':             "BOOLEAN"
     }
 
@@ -24,7 +24,7 @@ class Event(DatabaseSavable):
                  time_start: datetime,
                  time_end: datetime,
                  name='', description='',
-                 event_group_id=None,
+                 group_id=None,
                  done=False):
         super().__init__()
         self.user_id = user_id
@@ -32,8 +32,14 @@ class Event(DatabaseSavable):
         self.time_start = time_start
         self.time_end = time_end
         self.description = description
-        self.event_group_id = event_group_id
+        self.group_id = group_id
         self.done = done
+
+    def __eq__(self, other):
+        if not isinstance(other, Event):
+            return False
+        else:
+            return self.id == other.id
 
     def move_by_period(self, delta: timedelta):
         self.time_start += delta

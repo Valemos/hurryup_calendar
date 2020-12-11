@@ -144,7 +144,7 @@ class DatabaseHandler:
 
 
     def get_events_for_period(self, user, start: datetime, end: datetime):
-        """get all events in given date range as list"""
+        """get all events_list in given date range as list"""
         self._main_cursor.execute(
             sql.SQL(f"SELECT * FROM {Event.table_name} WHERE \"user_id\"=%s AND \"time_start\" BETWEEN %s AND %s;"),
             (user.id, start, end)
@@ -160,13 +160,18 @@ class DatabaseHandler:
         """return all event patterns"""
         pass
 
-    def get_all_event_groups(self, user):
+    def get_event_groups(self, user):
         """
 
         :param user: User object
-        :return: list of EventGroup objects with their events
+        :return: list of EventGroup objects with their events_list
         """
-        pass
+        query = f"SELECT * FROM {EventGroup.table_name} LEFT JOIN {Event.table_name} "\
+                f"ON {EventGroup.table_name}.id = {Event.table_name}.group_id " \
+                f"WHERE {EventGroup.table_name}.user_id = {sql.Literal(user.id).as_string(self._main_cursor)}"
+        self._main_cursor.execute(query)
+
+        return self._main_cursor.fetchall()
 
     def update_user(self, user: User):
         """
@@ -223,9 +228,11 @@ class DatabaseHandler:
         )
         return self._main_cursor.fetchone()[0]
 
-    @staticmethod
-    def _and_clause_from_dict(field_dict: dict):
-        return sql.SQL(" AND ").join(f"{sql.Identifier(name)} = {sql.Literal(value)}" for name, value in field_dict.items())
+    def _and_clause_from_dict(self, field_dict: dict):
+        return sql.SQL(" AND ").join(
+            sql.Identifier(name) + sql.SQL(" = ") + sql.Literal(value)
+            for name, value in field_dict.items()
+        ).as_string(self._main_cursor)
 
     def _query_update_one(self, obj, search_dict: dict, values_dict: dict = None):
         """
@@ -242,13 +249,13 @@ class DatabaseHandler:
             values_dict = obj.get_values()
 
         set_fields_string = sql.SQL(', ').join(
-            map(lambda id_, value: (
+            map(lambda elem: (
                 sql.SQL("{0}={1}").format(
-                    sql.Identifier(id_),
-                    sql.Literal(value))
+                    sql.Identifier(elem[0]),
+                    sql.Literal(elem[1]))
             ),
-                (elem for elem in values_dict if elem[0] != "id" and elem[0] not in search_dict))
-        )
+                (elem for elem in values_dict.items() if elem[0] != "id" and elem[0] not in search_dict))
+        ).as_string(self._main_cursor)
         query = f"UPDATE {obj.table_name}\nSET {set_fields_string}\nWHERE {self._and_clause_from_dict(search_dict)};"
 
         self._main_cursor.execute(query)
