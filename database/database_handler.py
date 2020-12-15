@@ -115,12 +115,13 @@ class DatabaseHandler:
     # database request functions
     def update(self, obj):
         """
+        Accepts all objects except User object
+
         Updates entity for parent_object if it was already created
         Inserts entity for parent_object if it is new in table (if id was not assigned to it at creation point)
 
         if entity is None, than parent_object is the entity to update or insert
 
-        :param user: parent_object, who requests update
         :param obj: object to update in database
         :return: True if update successful False otherwise
         """
@@ -171,7 +172,27 @@ class DatabaseHandler:
                 f"WHERE {EventGroup.table_name}.user_id = {sql.Literal(user.id).as_string(self._main_cursor)}"
         self._main_cursor.execute(query)
 
-        return self._main_cursor.fetchall()
+        group_values_count = len(EventGroup.table_columns)
+        event_values_count = len(Event.table_columns)
+
+        # id value must be set separately from other fields
+        event_line_start = group_values_count
+
+        groups = []
+        for line in self._main_cursor.fetchall():
+            cur_group_id = line[0]
+            cur_event = Event(*line[event_line_start + 1: event_line_start + event_values_count])
+            cur_event.id = line[event_line_start]
+
+            last_group_id = groups[-1].id if len(groups) > 0 else None
+            if cur_group_id == last_group_id:
+                groups[-1].events.append(cur_event)
+            else:
+                new_group = EventGroup(*line[1: group_values_count], events=[cur_event])
+                new_group.id = cur_group_id
+                groups.append(new_group)
+
+        return groups
 
     def update_user(self, user: User):
         """

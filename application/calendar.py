@@ -21,13 +21,12 @@ class Calendar:
 
     def get_events_today(self, user: User, request_date: date):
         """
-        Using request_date to get events_list starting from 0:00 AM today to 00:00 AM tomorrow
+        Using request_date to get events_list starting from 0:00 AM current date to 00:00 AM after this date
 
         :param user: user object
-        :param request_date: date to get events_list
-        :return: events_list list
+        :param request_date: date to get events list for it
+        :return: list of events for current day
         """
-
         today = datetime.combine(request_date, time(0, 0, 0))
         return self.database_handler.get_events_for_period(user, today, today + timedelta(days=1))
 
@@ -35,12 +34,10 @@ class Calendar:
         """
         Using request_date to get events_list starting from Monday to Sunday of this week
 
-        :param user:
-        :param request_date:
-        :return:
+        :param user: User object, requested events list
+        :param request_date: date corresponds to some week
+        :return: list of events for current week
         """
-
-        # get first day of current week
         first_day = request_date - timedelta(days=request_date.weekday())
         first_day = datetime.combine(first_day, time(0, 0, 0))
         return self.database_handler.get_events_for_period(user, first_day, first_day + timedelta(days=7))
@@ -49,9 +46,9 @@ class Calendar:
         """
         Use request_date to get first day of month and get all events_list to last day of month
 
-        :param user: User object, requested events_list
+        :param user: User object, requested events list
         :param request_date: date corresponds to some month
-        :return:
+        :return: list of events for current month
         """
         first_day = request_date - timedelta(days=request_date.day + 1)
         first_day = datetime.combine(first_day, time(0, 0, 0))
@@ -63,16 +60,15 @@ class Calendar:
         Inserts or updates user in database
         :param user: User object to add
         """
-        self.database_handler.update_user(user)
+        user.update_db(self.database_handler)
 
     def update_event(self, event: Event):
         """
         insert or update Event object to database
 
         :param event: Event object
-        :return:
         """
-        self.database_handler.update(event)
+        event.update_db(self.database_handler)
 
     def update_event_group(self, group: EventGroup):
         """
@@ -80,7 +76,7 @@ class Calendar:
 
         :param group: EventGroup object
         """
-        self.database_handler.update(group)
+        group.update_db(self.database_handler)
 
     def get_event_groups(self, user: User):
         """
@@ -108,9 +104,11 @@ class Calendar:
         """
         return self.database_handler.get_all_event_patterns(user)
 
-    def add_parametric_event(self, event: EventParametric):
+    def add_parametric_event(self, event_pattern: EventPattern, event: EventParametric):
         """
         Inserts EventParametric to be associated with EventPattern inside event in database
-        :param event: EventParametric object to add to EventPattern in database
+        :param event_pattern: event pattern to add event to
+        :param event: EventParametric object that contains required
         """
-        self.database_handler.update(event)
+        event.patern_id = event_pattern.id
+        self.database_handler.update_fields(event, ["patern_id"])

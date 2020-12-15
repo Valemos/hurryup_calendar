@@ -38,17 +38,17 @@ def events(db_handler_obj, user_obj):
 
 @pytest.fixture()
 def event_group_obj(db_handler_obj, user_obj):
-    return db_handler_obj.update(EventGroup(user_obj, "Test group"))
+    return db_handler_obj.update(EventGroup(user_obj.id, "Test group"))
 
 @pytest.fixture()
 def event_group_elements(calendar, event_group_obj, events):
-    group_events = []
-    for i in range(4, 8):
-        calendar.add_event_to_group(event_group_obj, events[i])
+    group_events = events[4:8]
+    for event in group_events:
+        calendar.add_event_to_group(event_group_obj, event)
     return group_events
 
 
-class TestEventFeatures(unittest.TestCase):
+class TestCalendarFeatures(unittest.TestCase):
 
     @pytest.fixture(autouse=True)
     def init_calendar(self, calendar, user_obj, event_group_obj, event_group_elements):
@@ -68,7 +68,6 @@ class TestEventFeatures(unittest.TestCase):
         # must return events_list from monday 2020.11.2 to sunday 2020.11.8
         self.assertCountEqual(week_events, self.calendar.get_events_week(self.test_user, friday))
 
-    
     def test_get_all_event_groups(self):
         elements = self.calendar.get_event_groups(self.test_user)
 
@@ -76,5 +75,5 @@ class TestEventFeatures(unittest.TestCase):
         for group in elements:
             if group.name == self.test_group.name:
                 # group found
-                self.assertCountEqual(self.test_group_events, group.events_list)
+                self.assertListEqual(self.test_group_events, group.events)
                 break

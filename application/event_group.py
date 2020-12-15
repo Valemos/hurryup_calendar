@@ -13,14 +13,10 @@ class EventGroup(DatabaseSavable):
         "done":         "BOOLEAN"
     }
 
-    def __init__(self, user, name, description='', events=None):
+    def __init__(self, user_id, name, description='', done=False, events=None):
         super().__init__()
-        if events is None:
-            events = []
-
-        self.user = user
-        self.user_id = user.id
+        self.user_id = user_id
         self.name = name
         self.description = description
-        self.done = False
-        self.events = events
+        self.done = done
+        self.events = events if events is not None else []
