@@ -33,10 +33,12 @@ class DatabaseHandler:
 
         # check connection to database
         self._connected_db = self._try_connect_db()
-        if self._connected_db:
-            print("Connected successfully")
-        else:
-            print("Connection failed")
+
+        # debug
+        # if self._connected_db:
+        #     print("Connected successfully")
+        # else:
+        #     print("Connection failed")
 
         # self._recreate_all_tables() # DELETE current tables and create new tables
 
@@ -142,7 +144,12 @@ class DatabaseHandler:
         Deletes object from database
         :param obj:
         """
+        if isinstance(obj, User):
+            self._query_delete_one(obj, {"id": obj.id})
+        else:
+            self._query_delete_one(obj, {"id": obj.id, "user_id": obj.user_id})
 
+        self._main_connection.commit()
 
     def get_events_for_period(self, user, start: datetime, end: datetime):
         """get all events_list in given date range as list"""
@@ -159,7 +166,8 @@ class DatabaseHandler:
 
     def get_all_event_patterns(self, user):
         """return all event patterns"""
-        pass
+
+
 
     def get_event_groups(self, user):
         """
@@ -167,32 +175,12 @@ class DatabaseHandler:
         :param user: User object
         :return: list of EventGroup objects with their events_list
         """
-        query = f"SELECT * FROM {EventGroup.table_name} LEFT JOIN {Event.table_name} "\
-                f"ON {EventGroup.table_name}.id = {Event.table_name}.group_id " \
-                f"WHERE {EventGroup.table_name}.user_id = {sql.Literal(user.id).as_string(self._main_cursor)}"
-        self._main_cursor.execute(query)
 
-        group_values_count = len(EventGroup.table_columns)
-        event_values_count = len(Event.table_columns)
-
-        # id value must be set separately from other fields
-        event_line_start = group_values_count
-
-        groups = []
-        for line in self._main_cursor.fetchall():
-            cur_group_id = line[0]
-            cur_event = Event(*line[event_line_start + 1: event_line_start + event_values_count])
-            cur_event.id = line[event_line_start]
-
-            last_group_id = groups[-1].id if len(groups) > 0 else None
-            if cur_group_id == last_group_id:
-                groups[-1].events.append(cur_event)
-            else:
-                new_group = EventGroup(*line[1: group_values_count], events=[cur_event])
-                new_group.id = cur_group_id
-                groups.append(new_group)
-
-        return groups
+        return self._query_left_join_tables(EventGroup,
+                                            Event,
+                                            ("id", "group_id"),
+                                            {f"{EventGroup.table_name}.user_id": user.id},
+                                            "events")
 
     def update_user(self, user: User):
         """
@@ -223,6 +211,48 @@ class DatabaseHandler:
         """
         self._query_delete_one(user, {"id": user.id})
 
+    def _query_left_join_tables(self, obj_left, obj_right, fields_pair, filter_dict, obj_left_list_attr):
+        """
+        Performs join query with two tables
+        Collects all values from second table to list field from left table
+
+        :param obj_left: table that contains list of objects from right table
+        :param obj_right: child objects table for first table
+        :param fields_pair: tuple of two fields to match in JOIN query
+        :param filter_dict: filter dictionary to find all tables with correct fields
+        :param obj_left_list_attr: attribute name of list in object from left table
+        :return:
+        """
+
+        query = f"SELECT * FROM {obj_left.table_name} LEFT JOIN {obj_right.table_name} "\
+                f"ON {obj_left.table_name}.{fields_pair[0]} = {obj_right.table_name}.{fields_pair[1]} " \
+                f"WHERE {self._and_clause_from_dict_raw_name(filter_dict)};"
+        self._main_cursor.execute(query)
+
+        left_values_count = len(obj_left.table_columns)
+        right_values_count = len(obj_right.table_columns)
+
+        # id value of left table value is located after
+        right_line_start = left_values_count
+
+        objects = []
+        for line in self._main_cursor.fetchall():
+            cur_left_id = line[0]
+            cur_right_obj = obj_right(*line[right_line_start + 1: right_line_start + right_values_count])
+            cur_right_obj.id = line[right_line_start]
+
+            last_group_id = objects[-1].id if len(objects) > 0 else None
+            if cur_left_id == last_group_id:
+                getattr(objects[-1], obj_left_list_attr).append(cur_right_obj)
+            else:
+                new_left_obj = obj_left(*line[1: left_values_count])
+                setattr(new_left_obj, obj_left_list_attr, [cur_right_obj])
+                new_left_obj.id = cur_left_id
+                objects.append(new_left_obj)
+
+        return objects
+
+
     def _query_insert_one(self, obj):
         """
         Executes INSERT query with object fields and values
@@ -252,6 +282,12 @@ class DatabaseHandler:
     def _and_clause_from_dict(self, field_dict: dict):
         return sql.SQL(" AND ").join(
             sql.Identifier(name) + sql.SQL(" = ") + sql.Literal(value)
+            for name, value in field_dict.items()
+        ).as_string(self._main_cursor)
+
+    def _and_clause_from_dict_raw_name(self, field_dict: dict):
+        return sql.SQL(" AND ").join(
+            sql.SQL(name) + sql.SQL(" = ") + sql.Literal(value)
             for name, value in field_dict.items()
         ).as_string(self._main_cursor)
 
