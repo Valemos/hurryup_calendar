@@ -17,12 +17,12 @@ def db_handler_obj() -> DatabaseHandler:
     return handler
 
 @pytest.fixture()
-def calendar(db_handler_obj):
-    return Calendar(db_handler_obj)
-
-@pytest.fixture()
 def user_obj(db_handler_obj):
     return db_handler_obj.update_user(User("Test", "test", "a@gmail.com", md5(b"1234567890").digest().hex()))
+
+@pytest.fixture()
+def calendar(db_handler_obj, user_obj):
+    return Calendar(user_obj, db_handler_obj)
 
 @pytest.fixture()
 def events(db_handler_obj, user_obj):
@@ -66,10 +66,10 @@ class TestCalendarFeatures(unittest.TestCase):
         week_events = self.events_list[1:8]
         friday = date(2020, 11, 6)
         # must return events_list from monday 2020.11.2 to sunday 2020.11.8
-        self.assertCountEqual(week_events, self.calendar.get_events_week(self.test_user, friday))
+        self.assertCountEqual(week_events, self.calendar.get_events_week(friday))
 
     def test_get_all_event_groups(self):
-        elements = self.calendar.get_event_groups(self.test_user)
+        elements = self.calendar.get_event_groups()
 
         # find object group
         for group in elements:
