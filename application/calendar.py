@@ -68,6 +68,7 @@ class Calendar:
 
         :param event: Event object
         """
+        event.user_id = self.user.id
         event.update_db(self.database_handler)
 
     def update_event_group(self, group: EventGroup):
@@ -109,5 +110,4 @@ class Calendar:
         :param event_pattern: event pattern to add event to
         :param event: EventParametric object that contains required
         """
-        event.patern_id = event_pattern.id
-        self.database_handler.update_fields(event, ["patern_id"])
+        event_pattern.add_event(event, self.database_handler)

@@ -28,9 +28,9 @@ def calendar(db_handler_obj, user_obj):
 def events(db_handler_obj, user_obj):
     all_events = []
     for day in range(1, 15):
-        event = Event(user_obj.id,
-                      datetime(2020, 11, day, 11, 00),
+        event = Event(datetime(2020, 11, day, 11, 00),
                       datetime(2020, 11, day, 12, 00),
+                      user_obj.id,
                       f"Event {day}")
         db_handler_obj.update(event)
         all_events.append(event)

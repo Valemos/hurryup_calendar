@@ -9,41 +9,42 @@ class Event(DatabaseSavable):
 
     table_name = "\"Event\""
     table_columns = {
-        'id':               "SERIAL PRIMARY KEY",
-        'user_id':          f"INTEGER REFERENCES {User.table_name} ON DELETE CASCADE",
-        'time_start':       "TIMESTAMP NOT NULL",
-        'time_end':         "TIMESTAMP NOT NULL",
-        'name':             "VARCHAR(64) NOT NULL",
-        'description':      "TEXT",
-        'group_id':   f"INTEGER REFERENCES {EventGroup.table_name}(id)",
-        'done':             "BOOLEAN"
+        'id':           "SERIAL PRIMARY KEY",
+        'time_start':   "TIMESTAMP NOT NULL",
+        'time_end':     "TIMESTAMP NOT NULL",
+        'name':         "VARCHAR(64) NOT NULL",
+        'description':  "TEXT",
+        'owner_id':      f"INTEGER REFERENCES {User.table_name} ON DELETE CASCADE",
+        'group_id':     f"INTEGER REFERENCES {EventGroup.table_name}(id)",
+        'done':         "BOOLEAN"
     }
 
     def __init__(self,
-                 user_id,
-                 time_start: datetime,
-                 time_end: datetime,
-                 name='', description='',
+                 time_start: datetime = datetime(0, 0, 0),
+                 time_end: datetime = datetime(0, 0, 0),
+                 name='',
+                 description='',
+                 owner_id=-1,
                  group_id=None,
-                 done=False):
+                 done=False,
+                 participants=None):
         super().__init__()
-        self.user_id = user_id
         self.name = name
         self.time_start = time_start
         self.time_end = time_end
         self.description = description
+        self.owner_id = owner_id
+        self.participants = [] if participants is None else participants
         self.group_id = group_id
         self.done = done
-
-    def __eq__(self, other):
-        if not isinstance(other, Event):
-            return False
-        else:
-            return self.id == other.id
 
     def move_by_period(self, delta: timedelta):
         self.time_start += delta
         self.time_end += delta
+
+    def move_to_datetime(self, new_time: datetime):
+        time_difference = self.time_start - new_time
+        self.move_by_period(time_difference)
 
 
 class EventParticipants(DatabaseSavable, ABC):

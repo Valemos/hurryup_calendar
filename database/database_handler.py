@@ -164,14 +164,8 @@ class DatabaseHandler:
             events[-1].id = values[0]
         return events
 
-    def get_all_event_patterns(self, user):
-        """return all event patterns"""
-
-
-
     def get_event_groups(self, user):
         """
-
         :param user: User object
         :return: list of EventGroup objects with their events_list
         """
@@ -180,6 +174,15 @@ class DatabaseHandler:
                                             Event,
                                             ("id", "group_id"),
                                             {f"{EventGroup.table_name}.user_id": user.id},
+                                            "events")
+
+    def get_all_event_patterns(self, user):
+        """Return all event patterns"""
+
+        return self._query_left_join_tables(EventPattern,
+                                            EventParametric,
+                                            ("id", "patern_id"),
+                                            {f"{EventPattern.table_name}.user_id": user.id},
                                             "events")
 
     def update_user(self, user: User):
@@ -211,47 +214,61 @@ class DatabaseHandler:
         """
         self._query_delete_one(user, {"id": user.id})
 
-    def _query_left_join_tables(self, obj_left, obj_right, fields_pair, filter_dict, obj_left_list_attr):
+    def _query_left_join_tables(self,
+                                table_left: DatabaseSavable, table_right: DatabaseSavable,
+                                fields_pair, filter_dict, table_left_list_attr_name):
         """
         Performs join query with two tables
         Collects all values from second table to list field from left table
 
-        :param obj_left: table that contains list of objects from right table
-        :param obj_right: child objects table for first table
-        :param fields_pair: tuple of two fields to match in JOIN query
+        :param table_left: table that contains list of objects from right table
+        :param table_right: child objects table for first table
+        :param fields_pair: tuple of two fields to match in JOIN ON query
         :param filter_dict: filter dictionary to find all tables with correct fields
-        :param obj_left_list_attr: attribute name of list in object from left table
-        :return:
+        :param table_left_list_attr_name: attribute name of list in object from left table
+        :return: object list from left table with lists of objects from right table
         """
 
-        query = f"SELECT * FROM {obj_left.table_name} LEFT JOIN {obj_right.table_name} "\
-                f"ON {obj_left.table_name}.{fields_pair[0]} = {obj_right.table_name}.{fields_pair[1]} " \
+        query = f"SELECT * FROM {table_left.table_name} LEFT JOIN {table_right.table_name} "\
+                f"ON {table_left.table_name}.{fields_pair[0]} = {table_right.table_name}.{fields_pair[1]} " \
                 f"WHERE {self._and_clause_from_dict_raw_name(filter_dict)};"
         self._main_cursor.execute(query)
 
-        left_values_count = len(obj_left.table_columns)
-        right_values_count = len(obj_right.table_columns)
+        return self.split_left_join_results(table_left, table_left_list_attr_name, table_right)
 
-        # id value of left table value is located after
-        right_line_start = left_values_count
+    def split_left_join_results(self, table_left, table_right, table_left_list_attr_name):
+        """
+        Splits rows from previous left join query using left and right table data
+
+        :param table_left: left table class object
+        :param table_right: right table class object
+        :param table_left_list_attr_name: attribute name for list inside left table object
+        :return:
+        """
+
+        object_left_line_end = len(table_left.table_columns)
+        object_right_line_end = object_left_line_end + len(table_right.table_columns)
 
         objects = []
-        for line in self._main_cursor.fetchall():
-            cur_left_id = line[0]
-            cur_right_obj = obj_right(*line[right_line_start + 1: right_line_start + right_values_count])
-            cur_right_obj.id = line[right_line_start]
+        for cursor_line in self._main_cursor.fetchall():
+            cur_object_left = table_left.from_table_values(
+                cursor_line[0: object_left_line_end]
+            )
 
-            last_group_id = objects[-1].id if len(objects) > 0 else None
-            if cur_left_id == last_group_id:
-                getattr(objects[-1], obj_left_list_attr).append(cur_right_obj)
+            cur_object_right = table_right.from_table_values(
+                cursor_line[object_left_line_end: object_right_line_end]
+            )
+
+            last_object = objects[-1] if len(objects) > 0 else None
+            if cur_object_left == last_object:
+                object_left_list = getattr(last_object, table_left_list_attr_name)
+                object_left_list.append(cur_object_right)
             else:
-                new_left_obj = obj_left(*line[1: left_values_count])
-                setattr(new_left_obj, obj_left_list_attr, [cur_right_obj])
-                new_left_obj.id = cur_left_id
-                objects.append(new_left_obj)
+                object_left_list = getattr(cur_object_left, table_left_list_attr_name)
+                object_left_list.append(cur_object_right)
+                objects.append(cur_object_left)
 
         return objects
-
 
     def _query_insert_one(self, obj):
         """

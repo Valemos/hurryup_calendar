@@ -3,6 +3,8 @@ class DatabaseSavable:
     """
     This class is an interface to create table in database
     and save specified fields of an objects in that table
+
+    Every object must have a constructor with no parameters (or all of them are default)
     """
 
     """
@@ -33,11 +35,24 @@ class DatabaseSavable:
         # id is created by default for each object
         self.id = -1
 
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        else:
+            return self.id == other.id
+
     def update_db(self, database):
         database.update(self)
 
     def delete_db(self, database):
         database.delete(self)
+
+    @classmethod
+    def from_table_values(cls, values):
+        new_object = cls()
+        for attribute, value_i in zip(cls.table_columns.keys(), range(len(values))):
+            setattr(new_object, attribute, values[value_i])
+        return new_object
 
     def get_values(self):
         """
