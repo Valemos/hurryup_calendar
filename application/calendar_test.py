@@ -9,20 +9,22 @@ from database.database_handler import DatabaseHandler
 from application.calendar import Calendar, User, Event
 
 
-
 @pytest.fixture()
 def db_handler_obj() -> DatabaseHandler:
     handler = DatabaseHandler(new_name="testcalendar")
     handler._recreate_all_tables()
     return handler
 
+
 @pytest.fixture()
 def user_obj(db_handler_obj):
     return db_handler_obj.update_user(User("Test", "test", "a@gmail.com", md5(b"1234567890").digest().hex()))
 
+
 @pytest.fixture()
 def calendar(db_handler_obj, user_obj):
     return Calendar(user_obj, db_handler_obj)
+
 
 @pytest.fixture()
 def events(db_handler_obj, user_obj):
@@ -36,9 +38,11 @@ def events(db_handler_obj, user_obj):
         all_events.append(event)
     return all_events
 
+
 @pytest.fixture()
 def event_group_obj(db_handler_obj, user_obj):
     return db_handler_obj.update(EventGroup(user_obj.id, "Test group"))
+
 
 @pytest.fixture()
 def event_group_elements(calendar, event_group_obj, events):
@@ -77,30 +81,30 @@ class TestCalendarFeatures(unittest.TestCase):
                 # group found
                 self.assertListEqual(self.test_group_events, group.events)
                 break
-				
-	def test_get_all_users(self):
-		pass
-		
-	def test_get_user_by_name(self):
-		pass
-	
-	def test_get_all_events(self):
-		pass
-	
-	def test_get_events_by_date(self):
-		pass
-		
-	def test_get_events_by_date_interval(self):
-		pass
-		
-	def test_update_user(self):
-		pass
-		
-	def test_update_event(self):
-		pass
-		
-	def test_delete_user(self):
-		pass
-		
-	def test_delete_event(self):
-		pass
+
+    def test_get_all_users(self):
+        pass
+
+    def test_get_user_by_name(self):
+        pass
+
+    def test_get_all_events(self):
+        pass
+
+    def test_get_events_by_date(self):
+        pass
+
+    def test_get_events_by_date_interval(self):
+        pass
+
+    def test_update_user(self):
+        pass
+
+    def test_update_event(self):
+        pass
+
+    def test_delete_user(self):
+        pass
+
+    def test_delete_event(self):
+        pass
