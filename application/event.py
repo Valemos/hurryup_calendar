@@ -20,8 +20,8 @@ class Event(DatabaseSavable):
     }
 
     def __init__(self,
-                 time_start: datetime = datetime(1, 1, 0),
-                 time_end: datetime = datetime(1, 1, 0),
+                 time_start: datetime = datetime(1, 1, 1),
+                 time_end: datetime = datetime(1, 1, 1),
                  name='',
                  description='',
                  user_id=-1,

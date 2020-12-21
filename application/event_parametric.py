@@ -17,8 +17,8 @@ class EventParametric(DatabaseSavable):
     }
 
     def __init__(self,
-                 start_time: datetime = datetime(1, 1, 0),
-                 end_time: datetime = datetime(1, 1, 0),
+                 start_time: datetime = datetime(1, 1, 1),
+                 end_time: datetime = datetime(1, 1, 1),
                  name='',
                  description='',
                  user_id=-1,
