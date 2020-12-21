@@ -32,11 +32,10 @@ class DatabaseHandler:
         self._connected_state = self._try_connect_db()
 
     def __del__(self):
-        """Close connection on delete"""
         if self._main_connection is not None:
             self._main_connection.close()
 
-    def _try_connect_db(self):  # connecting to DB
+    def _try_connect_db(self):
         """Creates connection to database with necessary credentials and initializes cursor"""
 
         try:
@@ -63,7 +62,7 @@ class DatabaseHandler:
         for table in DatabaseHandler._tables_list:
             self._main_cursor.execute(f"CREATE TABLE IF NOT EXISTS {table.table_name}();")
 
-        self._main_connection.commit()  # push changes to DB
+        self._main_connection.commit()
 
     def _create_columns(self):
         """
@@ -73,7 +72,6 @@ class DatabaseHandler:
         Or else it needs more complicated error handling
         """
 
-        # add columns to tables
         for table in self._tables_list:
             try:
                 query = ""
@@ -84,7 +82,7 @@ class DatabaseHandler:
             except Exception as e:
                 print(e)
 
-        self._main_connection.commit()  # push changes to DB
+        self._main_connection.commit()
 
     def _recreate_all_tables(self):
         for table in DatabaseHandler._tables_list:
@@ -92,7 +90,7 @@ class DatabaseHandler:
 
         self._correct_tables()
         self._create_columns()
-        self._main_connection.commit()  # push changes to DB
+        self._main_connection.commit()
 
     # database request functions
     def update(self, obj):
@@ -143,7 +141,7 @@ class DatabaseHandler:
             filter_dict={f"{EventGroup.table_name}.user_id": user.id},
             list_attribute_name="events")
 
-    def get_all_event_patterns(self, user):
+    def get_event_patterns(self, user):
         return self._query_left_join_tables(
             EventPattern, EventParametric,
             match_fields=("id", "patern_id"),
@@ -151,15 +149,6 @@ class DatabaseHandler:
             list_attribute_name="events")
 
     def update_user(self, user: User):
-        """
-        Updates user if it was already created
-        Inserts user if it is new in table (if id was not assigned to it at creation point)
-
-        :param user: user object to update
-        :return: reference to 'user' object with updated id
-                or None, if connection with database was not established yet
-        """
-
         if self._connected_state:
             if user.id != -1:
                 # object id remains the same
@@ -173,10 +162,6 @@ class DatabaseHandler:
         return None
 
     def delete_user(self, user: User):
-        """
-        Deletes entry from User table and cascade delete all connected entries
-        :param user: User object to delete
-        """
         self._query_delete_one(user, {"id": user.id})
 
     def _query_left_join_tables(self,
@@ -191,9 +176,9 @@ class DatabaseHandler:
                 f"ON {table_left.table_name}.{match_fields[0]} = {table_right.table_name}.{match_fields[1]} " \
                 f"WHERE {self._and_clause_from_dict_raw_name(filter_dict)};"
         self._main_cursor.execute(query)
+        self._main_connection.commit()
 
         return self._split_left_join_results(table_left, list_attribute_name, table_right)
-
 
     def _split_left_join_results(self, table_left, table_right, list_attribute_name):
         object_left_line_end = len(table_left.table_columns)
@@ -232,12 +217,6 @@ class DatabaseHandler:
         return objects
 
     def _query_insert_one(self, obj):
-        """
-        Executes INSERT query with object fields and values
-
-        :param obj: object to insert
-        :return: id of newly created object
-        """
         values = obj.get_values()
 
         keys_str = sql.SQL(', ').join(
@@ -255,6 +234,7 @@ class DatabaseHandler:
             f"VALUES ({values_str}) "
             "RETURNING id;"
         )
+        self._main_connection.commit()
         return self._main_cursor.fetchone()[0]
 
     def _and_clause_from_dict(self, field_dict: dict):
@@ -272,16 +252,6 @@ class DatabaseHandler:
         ).as_string(self._main_cursor)
 
     def _query_update_one(self, obj, search_dict: dict, values_dict: dict = None):
-        """
-        This function contains UPDATE query which searches for specific value of a field
-        and updates contents of matching object using _main_cursor
-
-        :param obj: object which will be updated
-        :param search_dict: dictionary of field:value pairs to search inside query
-        :param values_dict: values to update inside current object,
-                if values is None, all columns for current object will be updated
-        """
-
         if values_dict is None:
             values_dict = obj.get_values()
 
@@ -296,23 +266,14 @@ class DatabaseHandler:
         query = f"UPDATE {obj.table_name}\nSET {set_fields_string}\nWHERE {self._and_clause_from_dict(search_dict)};"
 
         self._main_cursor.execute(query)
+        self._main_connection.commit()
 
     def _query_delete_one(self, obj, field_dict: dict):
-        """
-
-        :param obj: object to delete
-        :param field_dict: dictionary of field:value pairs to search for query
-        """
-
         query = f"DELETE FROM {obj.table_name} WHERE {self._and_clause_from_dict(field_dict)};"
         self._main_cursor.execute(query)
+        self._main_connection.commit()
 
     def update_fields(self, obj, fields: list):
-        """
-        Updates only specifyed fields for given object
-        :param obj: object to update
-        :param fields: list of strings with field names
-        """
         values = {}
         for field in fields:
             if field not in obj.__dict__:

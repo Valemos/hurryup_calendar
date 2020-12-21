@@ -7,7 +7,7 @@ from application.user import User
 
 class Event(DatabaseSavable):
 
-    table_name = "\"Event\""
+    table_name = "event"
     table_columns = {
         'id':           "SERIAL PRIMARY KEY",
         'time_start':   "TIMESTAMP NOT NULL",
@@ -20,8 +20,8 @@ class Event(DatabaseSavable):
     }
 
     def __init__(self,
-                 time_start: datetime = datetime(0, 0, 0),
-                 time_end: datetime = datetime(0, 0, 0),
+                 time_start: datetime = datetime(1, 1, 0),
+                 time_end: datetime = datetime(1, 1, 0),
                  name='',
                  description='',
                  user_id=-1,

@@ -5,7 +5,7 @@ from application.user import User, DatabaseSavable
 
 class EventParametric(DatabaseSavable):
 
-    table_name = "\"EventParametric\""
+    table_name = "eventparametric"
     table_columns = {
         'id':           "SERIAL PRIMARY KEY",
         'start_time':   "TIMESTAMP NOT NULL",
@@ -17,8 +17,8 @@ class EventParametric(DatabaseSavable):
     }
 
     def __init__(self,
-                 start_time: datetime = datetime(0, 0, 0),
-                 end_time: datetime = datetime(0, 0, 0),
+                 start_time: datetime = datetime(1, 1, 0),
+                 end_time: datetime = datetime(1, 1, 0),
                  name='',
                  description='',
                  user_id=-1,

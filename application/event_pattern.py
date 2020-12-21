@@ -3,7 +3,7 @@ from application.user import User, DatabaseSavable
 
 class EventPattern(DatabaseSavable):
 
-    table_name = "\"EventPattern\""
+    table_name = "eventpattern"
     table_columns = {
         'id':           "SERIAL PRIMARY KEY",
         'name':         "VARCHAR(64) NOT NULL",
@@ -11,7 +11,11 @@ class EventPattern(DatabaseSavable):
         'user_id':      f"INTEGER REFERENCES {User.table_name}(id) ON DELETE CASCADE"
     }
 
-    def __init__(self, name='', description='', user_id=-1, events=None):
+    def __init__(self,
+                 name='',
+                 description='',
+                 user_id=-1,
+                 events=None):
         super().__init__()
 
         self.user_id = user_id

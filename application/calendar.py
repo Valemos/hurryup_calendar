@@ -12,7 +12,7 @@ from application.event_parametric import EventParametric
 
 class Calendar:
 
-    def __init__(self, user, database_handler=None):
+    def __init__(self, user: User, database_handler=None):
 
         # to set another user it can be accessed as calendar object attribute
         self.user = user
@@ -56,7 +56,7 @@ class Calendar:
         self.database_handler.update_fields(event, ["group_id"])
 
     def get_event_patterns_with_events(self):
-        return self.database_handler.get_all_event_patterns(self.user)
+        return self.database_handler.get_event_patterns(self.user)
 
     def add_parametric_event(self, event_pattern: EventPattern, event: EventParametric):
         event_pattern.add_event(event, self.database_handler)

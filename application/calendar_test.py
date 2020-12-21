@@ -9,7 +9,6 @@ from database.database_handler import DatabaseHandler
 from application.calendar import Calendar, User, Event
 
 
-
 @pytest.fixture()
 def db_handler_obj() -> DatabaseHandler:
     handler = DatabaseHandler(new_name="testcalendar")
@@ -27,7 +26,7 @@ def calendar(db_handler_obj, user_obj):
 @pytest.fixture()
 def events(db_handler_obj, user_obj):
     all_events = []
-    for day in range(1, 15):
+    for day in range(1, 35):
         event = Event(datetime(2020, 11, day, 11, 00),
                       datetime(2020, 11, day, 12, 00),
                       f"Event {day}",
@@ -67,6 +66,14 @@ class TestCalendarFeatures(unittest.TestCase):
         friday = date(2020, 11, 6)
         # must return events_list from monday 2020.11.2 to sunday 2020.11.8
         self.assertCountEqual(week_events, self.calendar.get_events_current_week(friday))
+
+    def test_events_for_month(self):
+        for event in self.events_list:
+            self.calendar.update_event(event)
+
+        month_events = self.events_list[0:30]
+        # from 2020.11.1 to sunday 2020.11.30
+        self.assertCountEqual(month_events, self.calendar.get_events_current_week(month_events))
 
     def test_get_all_event_groups(self):
         elements = self.calendar.get_event_groups()

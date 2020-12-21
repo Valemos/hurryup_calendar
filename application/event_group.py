@@ -3,7 +3,7 @@ from database.database_savable import DatabaseSavable
 
 class EventGroup(DatabaseSavable):
 
-    table_name = "\"EventGroup\""
+    table_name = "eventgroup"
 
     table_columns = {
         "id":           "SERIAL PRIMARY KEY",
