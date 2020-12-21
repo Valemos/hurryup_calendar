@@ -1,4 +1,3 @@
-from application.event_parametric import EventParametric
 from application.user import User, DatabaseSavable
 
 class EventPattern(DatabaseSavable):
@@ -23,7 +22,7 @@ class EventPattern(DatabaseSavable):
         self.description = description
         self.events = events if events is not None else []
 
-    def add_event(self, event: EventParametric, database):
+    def add_event(self, event, database):
         event.user_id = self.user_id
         event.pattern_id = self.id
         database.update(event)

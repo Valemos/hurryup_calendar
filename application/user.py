@@ -8,7 +8,7 @@ class AccountType(enum.Enum):
 
 class User(DatabaseSavable):
 
-    table_name = "user"
+    table_name = '"user"'
 
     table_columns = {
         'id':               "SERIAL PRIMARY KEY",

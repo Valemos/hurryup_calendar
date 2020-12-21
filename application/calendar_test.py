@@ -9,22 +9,20 @@ from database.database_handler import DatabaseHandler
 from application.calendar import Calendar, User, Event
 
 
+
 @pytest.fixture()
 def db_handler_obj() -> DatabaseHandler:
     handler = DatabaseHandler(new_name="testcalendar")
     handler._recreate_all_tables()
     return handler
 
-
 @pytest.fixture()
 def user_obj(db_handler_obj):
     return db_handler_obj.update_user(User("Test", "test", "a@gmail.com", md5(b"1234567890").digest().hex()))
 
-
 @pytest.fixture()
 def calendar(db_handler_obj, user_obj):
     return Calendar(user_obj, db_handler_obj)
-
 
 @pytest.fixture()
 def events(db_handler_obj, user_obj):
@@ -38,11 +36,9 @@ def events(db_handler_obj, user_obj):
         all_events.append(event)
     return all_events
 
-
 @pytest.fixture()
 def event_group_obj(db_handler_obj, user_obj):
-    return db_handler_obj.update(EventGroup(user_obj.id, "Test group"))
-
+    return db_handler_obj.update(EventGroup("Test group", user_id=user_obj.id))
 
 @pytest.fixture()
 def event_group_elements(calendar, event_group_obj, events):
@@ -55,7 +51,7 @@ def event_group_elements(calendar, event_group_obj, events):
 class TestCalendarFeatures(unittest.TestCase):
 
     @pytest.fixture(autouse=True)
-    def init_calendar(self, calendar, user_obj, event_group_obj, event_group_elements):
+    def init_calendar(self, calendar, user_obj, events, event_group_obj, event_group_elements):
         """Uses pytest fixture and runs before each test instead of TestCase.setUp"""
         self.calendar = calendar
         self.test_user = user_obj
@@ -77,8 +73,9 @@ class TestCalendarFeatures(unittest.TestCase):
             self.calendar.update_event(event)
 
         month_events = self.events_list[0:30]
+        current_date = date(2020, 11, 6)
         # from 2020.11.1 to sunday 2020.11.30
-        self.assertCountEqual(month_events, self.calendar.get_events_current_week(month_events))
+        self.assertCountEqual(month_events, self.calendar.get_events_current_month(current_date))
 
     def test_get_all_event_groups(self):
         elements = self.calendar.get_event_groups()

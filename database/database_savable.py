@@ -41,4 +41,4 @@ class DatabaseSavable:
         return new_object
 
     def get_values(self):
-        return [(attribute, getattr(self, attribute)) for attribute in self.table_columns.keys()]
+        return {attribute: getattr(self, attribute) for attribute in self.table_columns.keys()}

@@ -101,12 +101,11 @@ class DatabaseHandler:
         if self._connected_state:
             if obj.id != -1:
                 # obj.id remains the same
-                self._query_update_one(obj, {"user_id": obj.user_id})
+                self._query_update_one(obj, {"id": obj.id})
             else:
                 # execute insert query and update object id
                 obj.id = self._query_insert_one(obj)
 
-            self._main_connection.commit()
             return obj
         return None
 
@@ -124,10 +123,11 @@ class DatabaseHandler:
 
     def get_events_for_period(self, user, start: datetime, end: datetime):
         self._main_cursor.execute(
-            sql.SQL(f"SELECT * FROM {Event.table_name} WHERE \"user_id\"=%s AND \"time_start\" BETWEEN %s AND %s;"),
+            sql.SQL(f'SELECT * FROM {Event.table_name} WHERE "user_id"=%s AND "time_start" BETWEEN %s AND %s;'),
             (user.id, start, end)
         )
-
+        s = sql.SQL(f"SELECT * FROM {Event.table_name} WHERE \"user_id\"={{0}} AND \"time_start\" BETWEEN {{1}} AND {{2}};").format(
+            sql.Literal(user.id), sql.Literal(start), sql.Literal(end)).as_string(self._main_cursor)
         events = []
         for values in self._main_cursor.fetchall():
             events.append(Event.from_table_values(values))
@@ -178,7 +178,7 @@ class DatabaseHandler:
         self._main_cursor.execute(query)
         self._main_connection.commit()
 
-        return self._split_left_join_results(table_left, list_attribute_name, table_right)
+        return self._split_left_join_results(table_left, table_right, list_attribute_name)
 
     def _split_left_join_results(self, table_left, table_right, list_attribute_name):
         object_left_line_end = len(table_left.table_columns)
@@ -221,12 +221,12 @@ class DatabaseHandler:
 
         keys_str = sql.SQL(', ').join(
             map(sql.Identifier,
-                (key for key, val in values if key != "id"))
+                (key for key, val in values.items() if key != "id"))
         ).as_string(self._main_cursor)
 
         values_str = sql.SQL(', ').join(
             map(sql.Literal,
-                (val for key, val in values if key != "id"))
+                (val for key, val in values.items() if key != "id"))
         ).as_string(self._main_cursor)
 
         self._main_cursor.execute(
