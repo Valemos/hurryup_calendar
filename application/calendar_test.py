@@ -78,29 +78,29 @@ class TestCalendarFeatures(unittest.TestCase):
                 self.assertListEqual(self.test_group_events, group.events)
                 break
 				
-	def test_get_all_users(self):
-		pass
+    def test_get_all_users(self):
+        pass
 		
-	def test_get_user_by_name(self):
-		pass
+    def test_get_user_by_name(self):
+        pass
 	
-	def test_get_all_events(self):
-		pass
+    def test_get_all_events(self):
+        pass
 	
-	def test_get_events_by_date(self):
-		pass
+    def test_get_events_by_date(self):
+        pass
 		
-	def test_get_events_by_date_interval(self):
-		pass
+    def test_get_events_by_date_interval(self):
+        pass
 		
-	def test_update_user(self):
-		pass
+    def test_update_user(self):
+        pass
 		
-	def test_update_event(self):
-		pass
+    def test_update_event(self):
+        pass
 		
-	def test_delete_user(self):
-		pass
+    def test_delete_user(self):
+        pass
 		
-	def test_delete_event(self):
-		pass
+    def test_delete_event(self):
+        pass
