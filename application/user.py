@@ -20,7 +20,13 @@ class User(DatabaseSavable):
         'image_url':        "TEXT"
     }
 
-    def __init__(self, name, login, email, password_hash, account_type=AccountType.User, image_url=''):
+    def __init__(self,
+                 name='',
+                 login='',
+                 email='',
+                 password_hash='',
+                 account_type=AccountType.User,
+                 image_url=''):
         super().__init__()
         self.name = name
         self.login = login

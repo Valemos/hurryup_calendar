@@ -6,12 +6,12 @@ class EventPattern(DatabaseSavable):
     table_name = "\"EventPattern\""
     table_columns = {
         'id':           "SERIAL PRIMARY KEY",
-        'user_id':      f"INTEGER REFERENCES {User.table_name}(id) ON DELETE CASCADE",
         'name':         "VARCHAR(64) NOT NULL",
-        'description':  "TEXT"
+        'description':  "TEXT",
+        'user_id':      f"INTEGER REFERENCES {User.table_name}(id) ON DELETE CASCADE"
     }
 
-    def __init__(self, user_id, name, description='', events=None):
+    def __init__(self, name='', description='', user_id=-1, events=None):
         super().__init__()
 
         self.user_id = user_id

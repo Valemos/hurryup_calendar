@@ -7,13 +7,19 @@ class EventGroup(DatabaseSavable):
 
     table_columns = {
         "id":           "SERIAL PRIMARY KEY",
-        "user_id":      f"INTEGER REFERENCES {User.table_name}(id) ON DELETE CASCADE",
         "name":         "VARCHAR(64) NOT NULL",
         "description":  "TEXT",
-        "done":         "BOOLEAN"
+        "done":         "BOOLEAN",
+        "user_id":      f"INTEGER REFERENCES {User.table_name}(id) ON DELETE CASCADE"
     }
 
-    def __init__(self, user_id, name, description='', done=False, events=None):
+    def __init__(self,
+                 name='',
+                 description='',
+                 done=False,
+                 user_id=-1,
+                 events=None):
+
         super().__init__()
         self.user_id = user_id
         self.name = name
