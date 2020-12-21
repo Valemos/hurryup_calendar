@@ -66,7 +66,7 @@ class TestCalendarFeatures(unittest.TestCase):
         week_events = self.events_list[1:8]
         friday = date(2020, 11, 6)
         # must return events_list from monday 2020.11.2 to sunday 2020.11.8
-        self.assertCountEqual(week_events, self.calendar.get_events_week(friday))
+        self.assertCountEqual(week_events, self.calendar.get_events_current_week(friday))
 
     def test_get_all_event_groups(self):
         elements = self.calendar.get_event_groups()
