@@ -30,8 +30,8 @@ def events(db_handler_obj, user_obj):
     for day in range(1, 15):
         event = Event(datetime(2020, 11, day, 11, 00),
                       datetime(2020, 11, day, 12, 00),
-                      user_obj.id,
-                      f"Event {day}")
+                      f"Event {day}",
+                      user_id=user_obj.id)
         db_handler_obj.update(event)
         all_events.append(event)
     return all_events

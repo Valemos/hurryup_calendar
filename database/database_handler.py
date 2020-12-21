@@ -4,7 +4,7 @@ from datetime import datetime
 import psycopg2
 import psycopg2.sql as sql
 
-from application.event import Event, EventParticipants
+from application.event import Event
 from application.event_group import EventGroup
 from application.event_parametric import EventParametric
 from application.event_pattern import EventPattern
@@ -13,8 +13,7 @@ from database.database_savable import DatabaseSavable
 
 
 class DatabaseHandler:
-    # dictionary for table columns   table_name : [table columns]
-    _tables_list = [User, EventGroup, Event, EventPattern, EventParametric, EventParticipants]
+    _tables_list = [User, EventGroup, Event, EventPattern, EventParametric]
 
     def __init__(self,
                  new_name="CalendarApp",
@@ -23,7 +22,6 @@ class DatabaseHandler:
                  new_host="localhost",
                  new_user="postgres"):
 
-        # values to connect to DB
         self._name_db = new_name
         self._pass_db = new_pass
         self._port_db = new_port
@@ -31,16 +29,7 @@ class DatabaseHandler:
         self._user_db = new_user
         self._main_connection = None
 
-        # check connection to database
-        self._connected_db = self._try_connect_db()
-
-        # debug
-        # if self._connected_db:
-        #     print("Connected successfully")
-        # else:
-        #     print("Connection failed")
-
-        # self._recreate_all_tables() # DELETE current tables and create new tables
+        self._connected_state = self._try_connect_db()
 
     def __del__(self):
         """Close connection on delete"""
@@ -65,8 +54,7 @@ class DatabaseHandler:
             return False
 
     def check_connected(self):
-        """Returns True if connection established, else returns False."""
-        return self._connected_db
+        return self._connected_state
 
     def _correct_tables(self):
         """check Tables and create it if not exists"""
@@ -78,10 +66,8 @@ class DatabaseHandler:
         self._main_connection.commit()  # push changes to DB
 
     def _create_columns(self):
-        """check Columns and create it if not exists"""
-
         """
-        BUG: there is a bug in PostgreSQL with PRIMARY KEY constraint
+        there is a bug in PostgreSQL with altering PRIMARY KEY constraint !
         https://www.postgresql.org/message-id/13277.1566920001%40sss.pgh.pa.us
         Thus, this function must be called only once at the start of database usage to avoid this conflict
         Or else it needs more complicated error handling
@@ -94,10 +80,6 @@ class DatabaseHandler:
                 for col_name, col_def in table.table_columns.items():
                     query += f"ALTER TABLE {table.table_name} ADD COLUMN IF NOT EXISTS {col_name} {col_def};\n"
 
-                if table.table_composite_primary_key is not None:
-                    key_values = sql.SQL(",").join(sql.Identifier(i) for i in table.table_composite_primary_key)
-                    query += f"ALTER TABLE {table.table_name} ADD PRIMARY KEY({key_values.as_string(self._main_cursor)});"
-
                 self._main_cursor.execute(query)
             except Exception as e:
                 print(e)
@@ -105,8 +87,6 @@ class DatabaseHandler:
         self._main_connection.commit()  # push changes to DB
 
     def _recreate_all_tables(self):
-        """delete all existing tables and create new tables"""
-
         for table in DatabaseHandler._tables_list:
             self._main_cursor.execute(f"DROP TABLE IF EXISTS {table.table_name} CASCADE;")
 
@@ -118,16 +98,9 @@ class DatabaseHandler:
     def update(self, obj):
         """
         Accepts all objects except User object
-
-        Updates entity for parent_object if it was already created
-        Inserts entity for parent_object if it is new in table (if id was not assigned to it at creation point)
-
-        if entity is None, than parent_object is the entity to update or insert
-
-        :param obj: object to update in database
-        :return: True if update successful False otherwise
+        Only User object don't have "user_id" column
         """
-        if self._connected_db:
+        if self._connected_state:
             if obj.id != -1:
                 # obj.id remains the same
                 self._query_update_one(obj, {"user_id": obj.user_id})
@@ -141,8 +114,8 @@ class DatabaseHandler:
 
     def delete(self, obj=None):
         """
-        Deletes object from database
-        :param obj:
+        Accepts all objects except User object
+        Only User object don't have "user_id" column
         """
         if isinstance(obj, User):
             self._query_delete_one(obj, {"id": obj.id})
@@ -152,38 +125,30 @@ class DatabaseHandler:
         self._main_connection.commit()
 
     def get_events_for_period(self, user, start: datetime, end: datetime):
-        """get all events_list in given date range as list"""
         self._main_cursor.execute(
             sql.SQL(f"SELECT * FROM {Event.table_name} WHERE \"user_id\"=%s AND \"time_start\" BETWEEN %s AND %s;"),
             (user.id, start, end)
         )
-        # create Event objects and assing their id's
+
         events = []
         for values in self._main_cursor.fetchall():
-            events.append(Event(*values[1:]))
-            events[-1].id = values[0]
+            events.append(Event.from_table_values(values))
+
         return events
 
     def get_event_groups(self, user):
-        """
-        :param user: User object
-        :return: list of EventGroup objects with their events_list
-        """
-
-        return self._query_left_join_tables(EventGroup,
-                                            Event,
-                                            ("id", "group_id"),
-                                            {f"{EventGroup.table_name}.user_id": user.id},
-                                            "events")
+        return self._query_left_join_tables(
+            EventGroup, Event,
+            match_fields=("id", "group_id"),
+            filter_dict={f"{EventGroup.table_name}.user_id": user.id},
+            list_attribute_name="events")
 
     def get_all_event_patterns(self, user):
-        """Return all event patterns"""
-
-        return self._query_left_join_tables(EventPattern,
-                                            EventParametric,
-                                            ("id", "patern_id"),
-                                            {f"{EventPattern.table_name}.user_id": user.id},
-                                            "events")
+        return self._query_left_join_tables(
+            EventPattern, EventParametric,
+            match_fields=("id", "patern_id"),
+            filter_dict={f"{EventPattern.table_name}.user_id": user.id},
+            list_attribute_name="events")
 
     def update_user(self, user: User):
         """
@@ -195,7 +160,7 @@ class DatabaseHandler:
                 or None, if connection with database was not established yet
         """
 
-        if self._connected_db:
+        if self._connected_state:
             if user.id != -1:
                 # object id remains the same
                 self._query_update_one(user, {"id": user.id})
@@ -216,58 +181,54 @@ class DatabaseHandler:
 
     def _query_left_join_tables(self,
                                 table_left: DatabaseSavable, table_right: DatabaseSavable,
-                                fields_pair, filter_dict, table_left_list_attr_name):
+                                match_fields, filter_dict, list_attribute_name):
         """
-        Performs join query with two tables
-        Collects all values from second table to list field from left table
-
-        :param table_left: table that contains list of objects from right table
-        :param table_right: child objects table for first table
-        :param fields_pair: tuple of two fields to match in JOIN ON query
-        :param filter_dict: filter dictionary to find all tables with correct fields
-        :param table_left_list_attr_name: attribute name of list in object from left table
-        :return: object list from left table with lists of objects from right table
+        match_fields: tuple of two fields to match in JOIN ON query
+        filter_dict: filter dictionary to find all tables with correct fields
         """
 
         query = f"SELECT * FROM {table_left.table_name} LEFT JOIN {table_right.table_name} "\
-                f"ON {table_left.table_name}.{fields_pair[0]} = {table_right.table_name}.{fields_pair[1]} " \
+                f"ON {table_left.table_name}.{match_fields[0]} = {table_right.table_name}.{match_fields[1]} " \
                 f"WHERE {self._and_clause_from_dict_raw_name(filter_dict)};"
         self._main_cursor.execute(query)
 
-        return self.split_left_join_results(table_left, table_left_list_attr_name, table_right)
+        return self._split_left_join_results(table_left, list_attribute_name, table_right)
 
-    def split_left_join_results(self, table_left, table_right, table_left_list_attr_name):
-        """
-        Splits rows from previous left join query using left and right table data
 
-        :param table_left: left table class object
-        :param table_right: right table class object
-        :param table_left_list_attr_name: attribute name for list inside left table object
-        :return:
-        """
-
+    def _split_left_join_results(self, table_left, table_right, list_attribute_name):
         object_left_line_end = len(table_left.table_columns)
         object_right_line_end = object_left_line_end + len(table_right.table_columns)
 
+        object_tables = (table_left, table_right)
+        object_line_ends = (object_left_line_end, object_right_line_end)
+
         objects = []
         for cursor_line in self._main_cursor.fetchall():
-            cur_object_left = table_left.from_table_values(
-                cursor_line[0: object_left_line_end]
-            )
+            line_objects = self._split_cursor_line(cursor_line, object_tables, object_line_ends)
 
-            cur_object_right = table_right.from_table_values(
-                cursor_line[object_left_line_end: object_right_line_end]
-            )
+            cur_object_left = line_objects[0]
+            cur_object_right = line_objects[1]
 
+            # appends right object to left object's list or appends new left object
             last_object = objects[-1] if len(objects) > 0 else None
             if cur_object_left == last_object:
-                object_left_list = getattr(last_object, table_left_list_attr_name)
+                object_left_list = getattr(last_object, list_attribute_name)
                 object_left_list.append(cur_object_right)
             else:
-                object_left_list = getattr(cur_object_left, table_left_list_attr_name)
+                object_left_list = getattr(cur_object_left, list_attribute_name)
                 object_left_list.append(cur_object_right)
                 objects.append(cur_object_left)
 
+        return objects
+
+    @staticmethod
+    def _split_cursor_line(cursor_line, tables, object_ends):
+        objects = []
+        beginning = 0
+        for table, end in zip(tables, object_ends):
+            new_object = table.from_table_values(cursor_line[beginning: end])
+            objects.append(new_object)
+            beginning = end
         return objects
 
     def _query_insert_one(self, obj):
@@ -297,12 +258,14 @@ class DatabaseHandler:
         return self._main_cursor.fetchone()[0]
 
     def _and_clause_from_dict(self, field_dict: dict):
+        # preferred function to use for general cases
         return sql.SQL(" AND ").join(
             sql.Identifier(name) + sql.SQL(" = ") + sql.Literal(value)
             for name, value in field_dict.items()
         ).as_string(self._main_cursor)
 
     def _and_clause_from_dict_raw_name(self, field_dict: dict):
+        # this function will not add brackets to name and use it as is
         return sql.SQL(" AND ").join(
             sql.SQL(name) + sql.SQL(" = ") + sql.Literal(value)
             for name, value in field_dict.items()

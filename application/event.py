@@ -14,7 +14,7 @@ class Event(DatabaseSavable):
         'time_end':     "TIMESTAMP NOT NULL",
         'name':         "VARCHAR(64) NOT NULL",
         'description':  "TEXT",
-        'owner_id':      f"INTEGER REFERENCES {User.table_name} ON DELETE CASCADE",
+        'user_id':      f"INTEGER REFERENCES {User.table_name} ON DELETE CASCADE",
         'group_id':     f"INTEGER REFERENCES {EventGroup.table_name}(id)",
         'done':         "BOOLEAN"
     }
@@ -24,7 +24,7 @@ class Event(DatabaseSavable):
                  time_end: datetime = datetime(0, 0, 0),
                  name='',
                  description='',
-                 owner_id=-1,
+                 user_id=-1,
                  group_id=None,
                  done=False,
                  participants=None):
@@ -33,7 +33,7 @@ class Event(DatabaseSavable):
         self.time_start = time_start
         self.time_end = time_end
         self.description = description
-        self.owner_id = owner_id
+        self.user_id = user_id
         self.participants = [] if participants is None else participants
         self.group_id = group_id
         self.done = done
@@ -45,14 +45,3 @@ class Event(DatabaseSavable):
     def move_to_datetime(self, new_time: datetime):
         time_difference = self.time_start - new_time
         self.move_by_period(time_difference)
-
-
-class EventParticipants(DatabaseSavable, ABC):
-
-    table_name = "\"EventParticipants\""
-    table_columns = {
-        'event_id': f"INTEGER REFERENCES {Event.table_name}(id) ON DELETE CASCADE",
-        'user_id':  f"INTEGER REFERENCES {User.table_name}(id) ON DELETE CASCADE"
-    }
-
-    table_composite_primary_key = ["event_id", "user_id"]
