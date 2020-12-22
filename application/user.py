@@ -1,9 +1,5 @@
+from application.account_type import AccountType
 from database.database_savable import DatabaseSavable
-import enum
-
-class AccountType(enum.Enum):
-    User = 0,
-    Admin = 1
 
 
 class User(DatabaseSavable):
