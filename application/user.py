@@ -9,7 +9,7 @@ class User(DatabaseSavable):
     table_columns = {
         'id':               "SERIAL PRIMARY KEY",
         'name':             "VARCHAR(64) NOT NULL",
-        'login':            "VARCHAR(128) NOT NULL",
+        'login':            "VARCHAR(128) UNIQUE NOT NULL",
         'email':            "VARCHAR(128) NOT NULL",
         'password_hash':    "VARCHAR(256) NOT NULL",
         'account_type':     "INTEGER DEFAULT 0",
@@ -30,6 +30,10 @@ class User(DatabaseSavable):
         self.password_hash = password_hash
         self.account_type = account_type.value
         self.image_url = image_url
+
+    def __eq__(self, other):
+        if super().__eq__(other):
+            return self.login == other.login
 
     def update_db(self, database):
         database.update_user(self)

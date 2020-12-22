@@ -55,14 +55,13 @@ class DatabaseHandler:
     def check_connected(self):
         return self._connected_state
 
-    def _correct_tables(self):
+    def _create_tables_if_not_exists(self):
         """check Tables and create it if not exists"""
 
         # check every table and create if not exists
         for table in DatabaseHandler._tables_list:
             self._main_cursor.execute(f"CREATE TABLE IF NOT EXISTS {table.table_name}();")
-
-        self._main_connection.commit()
+            self._main_connection.commit()
 
     def _create_columns(self):
         """
@@ -79,18 +78,17 @@ class DatabaseHandler:
                     query += f"ALTER TABLE {table.table_name} ADD COLUMN IF NOT EXISTS {col_name} {col_def};\n"
 
                 self._main_cursor.execute(query)
+                self._main_connection.commit()
             except Exception as e:
                 print(e)
-
-        self._main_connection.commit()
 
     def _recreate_all_tables(self):
         for table in DatabaseHandler._tables_list:
             self._main_cursor.execute(f"DROP TABLE IF EXISTS {table.table_name} CASCADE;")
+            self._main_connection.commit()
 
-        self._correct_tables()
+        self._create_tables_if_not_exists()
         self._create_columns()
-        self._main_connection.commit()
 
     # database request functions
     def update(self, obj):
@@ -149,6 +147,9 @@ class DatabaseHandler:
             list_attribute_name="events")
 
     def update_user(self, user: User):
+        if user is None:
+            raise ValueError("cannot update None user object")
+
         if self._connected_state:
             if user.id != -1:
                 # object id remains the same
@@ -217,6 +218,9 @@ class DatabaseHandler:
         return objects
 
     def _query_insert_one(self, obj):
+        if obj is None:
+            raise ValueError("cannot insert None object")
+
         values = obj.get_values()
 
         keys_str = sql.SQL(', ').join(
@@ -252,6 +256,9 @@ class DatabaseHandler:
         ).as_string(self._main_cursor)
 
     def _query_update_one(self, obj, search_dict: dict, values_dict: dict = None):
+        if obj is None:
+            raise ValueError("cannot update None object")
+
         if values_dict is None:
             values_dict = obj.get_values()
 
@@ -269,11 +276,17 @@ class DatabaseHandler:
         self._main_connection.commit()
 
     def _query_delete_one(self, obj, field_dict: dict):
+        if obj is None:
+            raise ValueError("cannot delete None object")
+
         query = f"DELETE FROM {obj.table_name} WHERE {self._and_clause_from_dict(field_dict)};"
         self._main_cursor.execute(query)
         self._main_connection.commit()
 
     def update_fields(self, obj, fields: list):
+        if obj is None:
+            raise ValueError("cannot update None object")
+
         values = {}
         for field in fields:
             if field not in obj.__dict__:
@@ -283,3 +296,14 @@ class DatabaseHandler:
 
         if len(values) > 0:
             self._query_update_one(obj, {"id": obj.id}, values)
+
+    def get_user_by_login(self, search_login):
+        query = f'SELECT * FROM {User.table_name} ' \
+                f'WHERE "login" = {sql.Literal(search_login).as_string(self._main_cursor)};'
+        self._main_cursor.execute(query)
+
+        query_result = self._main_cursor.fetchone()
+        if query_result is not None:
+            return self._split_cursor_line(query_result, (User,), (len(User.table_columns),))[0]
+        else:
+            return None
