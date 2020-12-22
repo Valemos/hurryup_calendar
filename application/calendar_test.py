@@ -93,12 +93,6 @@ class TestCalendarFeatures(unittest.TestCase):
     def test_get_user_by_name(self):
         pass
 
-    def test_get_all_events(self):
-        pass
-
-    def test_get_events_by_date(self):
-        pass
-
     def test_update_user(self):
         pass
 

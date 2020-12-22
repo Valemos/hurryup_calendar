@@ -1,5 +1,5 @@
+import calendar
 from datetime import date, time, datetime, timedelta
-from dateutil.relativedelta import relativedelta
 
 from database.database_handler import DatabaseHandler
 
@@ -32,10 +32,19 @@ class Calendar:
         last_day = first_day + timedelta(days=7)
         return self.database_handler.get_events_for_period(self.user, first_day, last_day)
 
+    @staticmethod
+    def increment_month(input_date, months):
+        month = input_date.month - 1 + months
+        year = input_date.year + month // 12
+        month = month % 12 + 1
+        day = min(input_date.day, calendar.monthrange(year, month)[1])
+        return datetime(year, month, day)
+
     def get_events_current_month(self, request_date: date):
         first_day = request_date - timedelta(days=request_date.day + 1)
         first_day = datetime.combine(first_day, time(0, 0, 0))
-        last_day = first_day + relativedelta(months=1) - timedelta(days=1)
+        last_day = self.increment_month(first_day, 1)
+        last_day -= timedelta(days=1)
         return self.database_handler.get_events_for_period(self.user, first_day, last_day)
 
     def update_user(self):
