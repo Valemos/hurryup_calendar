@@ -304,6 +304,11 @@ class DatabaseHandler:
 
         query_result = self._main_cursor.fetchone()
         if query_result is not None:
-            return self._split_cursor_line(query_result, (User,), (len(User.table_columns),))[0]
+            return User.from_table_values(query_result)
         else:
             return None
+
+    def get_all_users(self):
+        query = f'SELECT * FROM {User.table_name};'
+        self._main_cursor.execute(query)
+        return [User.from_table_values(result) for result in self._main_cursor.fetchall()]

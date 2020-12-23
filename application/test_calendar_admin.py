@@ -8,7 +8,7 @@ class TestAdminCalendar(unittest.TestCase):
 
     @pytest.fixture(autouse=True)
     def init_test_objects(self, calendar_admin, user_obj, admin_obj, events, event_group, group_events):
-        self.calendar_admin = calendar_admin
+        self.calendar_admin: CalendarAdmin = calendar_admin
         self.test_user = user_obj
         self.test_admin = admin_obj
         self.events_list = events
@@ -16,7 +16,10 @@ class TestAdminCalendar(unittest.TestCase):
         self.test_group_events = group_events
 
     def test_admin_calendar_created(self):
-        pass
+        self.assertRaises(CalendarAdmin.NotAdminUserException, CalendarAdmin, self.test_user)
 
     def test_admin_get_other_users(self):
-        pass
+        users = self.calendar_admin.get_all_users()
+
+        self.assertIn(self.test_admin, users)
+        self.assertIn(self.test_user, users)

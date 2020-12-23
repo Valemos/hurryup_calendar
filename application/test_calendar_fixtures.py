@@ -28,10 +28,9 @@ def user_obj(db_handler_obj):
 @pytest.fixture()
 def admin_obj(db_handler_obj):
     return db_handler_obj.update_user(
-        User(
-            "TestAdmin", "admin", "admin@gmail.com",
-            md5(b"1234567890").digest().hex(),
-            AccountType.Admin))
+        User("TestAdmin", "admin", "admin@gmail.com",
+             md5(b"1234567890").digest().hex(),
+             AccountType.Admin))
 
 
 @pytest.fixture()

@@ -9,9 +9,8 @@ class CalendarAdmin:
         pass
 
     def __init__(self, user_admin: User, database_handler=None):
-
         if AccountType(user_admin.account_type) is not AccountType.Admin:
-            raise CalendarAdmin.NotAdminUserException
+            raise CalendarAdmin.NotAdminUserException()
 
         self.user_admin = user_admin
         self.database_handler: DatabaseHandler = database_handler if database_handler is not None else DatabaseHandler()
@@ -20,3 +19,5 @@ class CalendarAdmin:
         if not self.database_handler.check_connected():
             print("Application not connected to database")
 
+    def get_all_users(self):
+        return self.database_handler.get_all_users()
