@@ -3,7 +3,7 @@ import tkinter as tk
 
 
 
-class Example(tk.Frame):
+class MonthView(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
 

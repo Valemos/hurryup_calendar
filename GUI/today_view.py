@@ -1,9 +1,7 @@
 import tkinter as tk    
 
 
-
-
-class Example(tk.Frame):
+class TodayView(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -16,12 +14,13 @@ class Example(tk.Frame):
 
         acts = ['Scarlett Johansson', 'Rachel Weiss', 'Natalie Portman', 'Jessica Alba']
        
-        self.lb = tk.Listbox(self,width=500)
+        self.lb = tk.Listbox(self, width=500)
         for i in acts:
             self.lb.insert(tk.END, i)
             self.lb.bind("<<ListboxSelect>>", self.on_select)
             self.lb.pack(pady=15)
-
+        updateButton = tk.Button(self, text="Update")
+        updateButton.pack()
         self.var = tk.StringVar()
         self.label = tk.Label(self, text=0, textvariable=self.var)
         self.label.pack()
