@@ -3,3 +3,5 @@ app.py
 uml_helper.py
 /database/__pycache__
 /application/__pycache__
+application/.pytest_cache
+.pytest_cache
