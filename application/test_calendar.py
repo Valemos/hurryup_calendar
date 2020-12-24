@@ -16,18 +16,12 @@ class TestCalendarFeatures(unittest.TestCase):
         self.request_date = request_date
 
     def test_get_for_week(self):
-        for event in self.test_events:
-            self.calendar_user.update_event(event)
-
         week_events = self.test_events[1:8]
         friday = date(2020, 11, 6)
         # must return test_events from monday 2020.11.2 to sunday 2020.11.8
         self.assertCountEqual(week_events, self.calendar_user.get_events_current_week(friday))
 
     def test_events_for_month(self):
-        for event in self.test_events:
-            self.calendar_user.update_event(event)
-
         month_events = self.test_events[0:30]
         current_date = date(2020, 11, 6)
         # from 2020.11.1 to sunday 2020.11.30
@@ -46,7 +40,8 @@ class TestCalendarFeatures(unittest.TestCase):
     def test_get_user_by_login(self):
         search_login = self.test_user.login
 
-        self.calendar_user.get_user_by_login(search_login)
+        fetched_user = self.calendar_user.get_user_by_login(search_login)
+        self.assertEqual(self.test_user, fetched_user)
 
     def test_update_user(self):
         new_test_name = "NewTestName"
